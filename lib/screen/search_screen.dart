@@ -277,9 +277,12 @@ class SearchScreenState extends State<SearchScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.star, color: Colors.amber, size: 16),
+          const SizedBox(width: 1.5),
           Text(
               // 영화 평점 (null 체크 및 기본값 추가)
-              movie.voteAverage != null ? movie.formattedVoteAverage : '평가 없음'),
+              movie.voteAverage != null && movie.voteAverage != 0.0
+                  ? '${((movie.voteAverage! * 10)).toInt()}%'
+                  : 'N/R'),
         ],
       ),
     );

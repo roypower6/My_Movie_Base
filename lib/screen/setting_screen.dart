@@ -70,7 +70,7 @@ class SettingScreen extends StatelessWidget {
             const ListTile(
               leading: Icon(Icons.info, color: Colors.blue),
               title: Text('앱 버전'),
-              subtitle: Text('1.0.7'),
+              subtitle: Text('1.0.8'),
             ),
             const ListTile(
               leading: Icon(Icons.email, color: Colors.red),

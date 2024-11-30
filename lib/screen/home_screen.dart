@@ -65,191 +65,42 @@ class MovieListScreenState extends State<MovieListScreen> {
     topRatedMovies = _apiService.getTopRatedMovies(page: currentPage); //탑 랭킹 영화
   }
 
-  Widget _buildMovieSection(Future<List<Movie>> futureMovies,
-      {bool isHorizontal = true}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (isHorizontal)
-          SizedBox(
-            height: 280,
-            child: FutureBuilder<List<Movie>>(
-              future: futureMovies,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No movies available'));
-                }
-
-                return ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: snapshot.data!.length,
-                  itemBuilder: (context, index) {
-                    final movie = snapshot.data![index];
-                    return Container(
-                      width: 140,
-                      margin: const EdgeInsets.only(right: 16),
-                      child: MovieItem(movie: movie),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildTopRatedSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            'TMDB 선정 영화 순위',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-        ),
-        FutureBuilder<List<Movie>>(
-          future: topRatedMovies,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(child: Text('No movies available'));
-            }
-
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: snapshot.data!.length,
-              itemBuilder: (context, index) {
-                final movie = snapshot.data![index];
-                return InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MovieDetailScreen(movie: movie),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 35,
-                          alignment: Alignment.center,
-                          child: Text(
-                            '${index + 1 + (currentPage - 1) * 20}',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: (index + (currentPage - 1) * 20) < 3
-                                  ? Colors.blue
-                                  : Colors.grey,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            movie.posterPath!,
-                            width: 60,
-                            height: 90,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                movie.title,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '평점: ${movie.voteAverage?.toStringAsFixed(1) ?? 'N/A'} | ${movie.genresText}',
-                                style: TextStyle(
-                                  color: Colors.grey[400],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPagination() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(10, (index) {
-          final page = index + 1;
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            child: InkWell(
-              onTap: () {
-                setState(() {
-                  currentPage = page;
-                  _loadMovies();
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: currentPage == page ? Colors.blue : Colors.grey[800],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '$page',
-                  style: TextStyle(
-                    color:
-                        currentPage == page ? Colors.white : Colors.grey[400],
-                    fontWeight: currentPage == page
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
-                ),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'My Movie Base',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 27,
               ),
-            ),
-          );
-        }),
+        ),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {
+            _loadMovies();
+          });
+        },
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeroSection(),
+              _buildToggleAndMovieSection(),
+              const SizedBox(height: 8),
+              _buildTopRatedSection(),
+              _buildPagination(),
+            ],
+          ),
+        ),
       ),
     );
   }
 
+  // 최상단 자동 슬라이드 섹션
   Widget _buildHeroSection() {
     return FutureBuilder<List<Movie>>(
       future: popularMovies,
@@ -354,142 +205,266 @@ class MovieListScreenState extends State<MovieListScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'My Movie Base',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 27,
-              ),
-        ),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          setState(() {
-            _loadMovies();
-          });
-        },
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  //현재 상영중, 상영 예정 영화 목록 섹션
+  Widget _buildToggleAndMovieSection() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          child: Row(
             children: [
-              _buildHeroSection(),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedIndex = 0;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: selectedIndex == 0
-                                    ? Colors.blue
-                                    : Colors.transparent,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.movie_outlined,
-                                color: selectedIndex == 0
-                                    ? Colors.blue
-                                    : Colors.grey[400],
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '현재 상영중',
-                                style: TextStyle(
-                                  color: selectedIndex == 0
-                                      ? Colors.blue
-                                      : Colors.grey[400],
-                                  fontSize: 15,
-                                  fontWeight: selectedIndex == 0
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedIndex = 1;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: selectedIndex == 1
-                                    ? Colors.blue
-                                    : Colors.transparent,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.upcoming_outlined,
-                                color: selectedIndex == 1
-                                    ? Colors.blue
-                                    : Colors.grey[400],
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '상영 예정',
-                                style: TextStyle(
-                                  color: selectedIndex == 1
-                                      ? Colors.blue
-                                      : Colors.grey[400],
-                                  fontSize: 15,
-                                  fontWeight: selectedIndex == 1
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              _buildToggleButton(
+                index: 0,
+                icon: Icons.movie_outlined,
+                label: '현재 상영중',
               ),
-              _buildMovieSection(
-                selectedIndex == 0 ? playingMovies : upcomingMovies,
-                isHorizontal: true,
+              _buildToggleButton(
+                index: 1,
+                icon: Icons.upcoming_outlined,
+                label: '상영 예정',
               ),
-              const SizedBox(height: 8),
-              _buildTopRatedSection(),
-              _buildPagination(),
             ],
           ),
         ),
+        _buildMovieSection(
+          selectedIndex == 0 ? playingMovies : upcomingMovies,
+          isHorizontal: true,
+        ),
+      ],
+    );
+  }
+
+  //현재 상영중, 상영 예정 영화 목록 섹션 토글 버튼
+  Widget _buildToggleButton({
+    required int index,
+    required IconData icon,
+    required String label,
+  }) {
+    final isSelected = selectedIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            selectedIndex = index;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: isSelected ? Colors.blue : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.blue : Colors.grey[400],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.blue : Colors.grey[400],
+                  fontSize: 15,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMovieSection(Future<List<Movie>> futureMovies,
+      {bool isHorizontal = true}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isHorizontal)
+          SizedBox(
+            height: 280,
+            child: FutureBuilder<List<Movie>>(
+              future: futureMovies,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No movies available'));
+                }
+
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final movie = snapshot.data![index];
+                    return Container(
+                      width: 140,
+                      margin: const EdgeInsets.only(right: 16),
+                      child: MovieItem(movie: movie),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  //TMDB 선정 영화 순위 섹션
+  Widget _buildTopRatedSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'TMDB 선정 영화 순위',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ),
+        FutureBuilder<List<Movie>>(
+          future: topRatedMovies,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text('No movies available'));
+            }
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: snapshot.data!.length,
+              itemBuilder: (context, index) {
+                final movie = snapshot.data![index];
+                return InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MovieDetailScreen(movie: movie),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 35,
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${index + 1 + (currentPage - 1) * 20}',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: (index + (currentPage - 1) * 20) < 3
+                                  ? Colors.blue
+                                  : Colors.grey,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            movie.posterPath!,
+                            width: 60,
+                            height: 90,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                movie.title,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '평점: ${((movie.voteAverage ?? 0) * 10).toInt()}% | ${movie.genresText}',
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  //영화 순위 페이지네이션 (1~10페이지)
+  Widget _buildPagination() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(10, (index) {
+          final page = index + 1;
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  currentPage = page;
+                  _loadMovies();
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: currentPage == page ? Colors.blue : Colors.grey[800],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '$page',
+                  style: TextStyle(
+                    color:
+                        currentPage == page ? Colors.white : Colors.grey[400],
+                    fontWeight: currentPage == page
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
