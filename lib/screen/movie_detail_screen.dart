@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:my_movie_base/model/actor_model.dart';
 import 'package:my_movie_base/model/movie_model.dart';
+import 'package:my_movie_base/model/movie_video_model.dart';
 import 'package:my_movie_base/model/review_model.dart';
 import 'package:my_movie_base/services/api_service.dart';
 import 'package:my_movie_base/services/favorite_provider.dart';
 import 'package:my_movie_base/services/favorite_service.dart';
 import 'package:provider/provider.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class MovieDetailScreen extends StatefulWidget {
   final Movie movie;
@@ -25,7 +27,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   late Future<String?> _movieRatingFuture;
   late Future<Actor?> _movieDirectorFuture;
   late Future<Map<String, List<String>>> _watchProvidersFuture;
+  late Future<List<MovieVideo>> _movieVideosFuture;
   final FavoriteService _favoriteService = FavoriteService();
+  String? _selectedVideoKey;
+  YoutubePlayerController? _youtubeController;
+  final PageController _pageController = PageController();
+  int _currentVideoPage = 0;
 
   @override
   void initState() {
@@ -37,6 +44,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _movieRatingFuture = ApiService().getMovieRating(widget.movie.id);
     _movieDirectorFuture = ApiService().getMovieDirector(widget.movie.id);
     _watchProvidersFuture = ApiService().getWatchProviders(widget.movie.id);
+    _movieVideosFuture = ApiService().getMovieVideos(widget.movie.id);
   }
 
   // 영화 상세 정보 조회
@@ -70,6 +78,27 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     setState(() {
       _isFavoriteFuture = _checkFavoriteStatus();
     });
+  }
+
+  void _playVideo(String videoKey) {
+    setState(() {
+      _selectedVideoKey = videoKey;
+      _youtubeController = YoutubePlayerController(
+        initialVideoId: videoKey,
+        flags: const YoutubePlayerFlags(
+          autoPlay: true,
+          mute: false,
+          enableCaption: true,
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _youtubeController?.dispose();
+    super.dispose();
   }
 
   @override
@@ -138,6 +167,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       else if (snapshot.hasData) ...[
                         _buildMovieDetails(context, snapshot.data!),
                         const SizedBox(height: 10),
+                        _buildVideosSection(),
                         _buildCastSection(),
                         _buildWatchProvidersSection(),
                         _buildReviewsSection(),
@@ -355,6 +385,188 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     );
   }
 
+  // 예고편 & 영상 유튜브 위젯
+  Widget _buildVideosSection() {
+    return FutureBuilder<List<MovieVideo>>(
+      future: _movieVideosFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final videos = snapshot.data!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '예고편 & 영상',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            if (_selectedVideoKey != null && _youtubeController != null) ...[
+              Hero(
+                tag: 'video_player',
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: YoutubePlayer(
+                    controller: _youtubeController!,
+                    showVideoProgressIndicator: true,
+                    progressIndicatorColor: Colors.red,
+                    progressColors: const ProgressBarColors(
+                      playedColor: Colors.red,
+                      handleColor: Colors.redAccent,
+                    ),
+                    onEnded: (metaData) {
+                      setState(() {
+                        _selectedVideoKey = null;
+                        _youtubeController?.dispose();
+                        _youtubeController = null;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            SizedBox(
+              height: 200,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: videos.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentVideoPage = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Hero(
+                      tag: 'video_thumbnail_${videos[index].key}',
+                      child: _buildVideoThumbnail(videos[index]),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            // 페이지 인디케이터
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (int i = 0; i < videos.length; i++)
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: i == _currentVideoPage
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.withOpacity(0.3),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
+        );
+      },
+    );
+  }
+
+  // 예고편 & 영상 유튜브 썸네일 위젯
+  Widget _buildVideoThumbnail(MovieVideo video) {
+    final isSelected = video.key == _selectedVideoKey;
+    return GestureDetector(
+      onTap: () {
+        if (isSelected) {
+          setState(() {
+            _selectedVideoKey = null;
+            _youtubeController?.dispose();
+            _youtubeController = null;
+          });
+        } else {
+          _playVideo(video.key);
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                'https://img.youtube.com/vi/${video.key}/hqdefault.jpg',
+                fit: BoxFit.cover,
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.8),
+                    ],
+                  ),
+                ),
+              ),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.white : Colors.red,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    isSelected ? Icons.stop : Icons.play_arrow,
+                    color: isSelected ? Colors.red : Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 8,
+                left: 8,
+                right: 8,
+                child: Text(
+                  video.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // 주요 출연진 섹션
   Widget _buildCastSection() {
     return Column(
@@ -432,7 +644,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           },
         ),
 
-        // 배우 섹션 (기존 코드)
+        // 배우 섹션
         FutureBuilder<List<Actor>>(
           future: _movieCreditsFuture,
           builder: (context, snapshot) {

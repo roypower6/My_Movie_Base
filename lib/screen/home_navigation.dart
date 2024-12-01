@@ -14,6 +14,13 @@ class HomeScreen extends StatefulWidget {
 
 class HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   final List<GButton> tabs = [
     const GButton(
@@ -50,8 +57,9 @@ class HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      body: IndexedStack(
-        index: _currentIndex,
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
         children: const [
           MovieListScreen(),
           FavoritesScreen(),
@@ -79,6 +87,11 @@ class HomeScreenState extends State<HomeScreen> {
                 setState(() {
                   _currentIndex = index;
                 });
+                _pageController.animateToPage(
+                  index,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.fastEaseInToSlowEaseOut,
+                );
               },
               gap: 8,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
