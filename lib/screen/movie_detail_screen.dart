@@ -12,8 +12,13 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class MovieDetailScreen extends StatefulWidget {
   final Movie movie;
+  final String heroTag;
 
-  const MovieDetailScreen({super.key, required this.movie});
+  const MovieDetailScreen({
+    super.key,
+    required this.movie,
+    required this.heroTag,
+  });
 
   @override
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();

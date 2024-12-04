@@ -27,6 +27,7 @@ class FavoritesScreenState extends State<FavoritesScreen> {
           '관심 목록',
           style: TextStyle(
             fontWeight: FontWeight.bold,
+            fontSize: 30,
           ),
         ),
       ),
@@ -53,7 +54,10 @@ class FavoritesScreenState extends State<FavoritesScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => MovieDetailScreen(movie: movie),
+                      builder: (context) => MovieDetailScreen(
+                        movie: movie,
+                        heroTag: 'favorite_${movie.id}',
+                      ),
                     ),
                   );
                 },

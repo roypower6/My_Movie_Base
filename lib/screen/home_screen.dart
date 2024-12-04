@@ -15,193 +15,254 @@ class MovieListScreen extends StatefulWidget {
 class MovieListScreenState extends State<MovieListScreen> {
   final ApiService _apiService = ApiService();
   final ScrollController _scrollController = ScrollController();
-  final PageController _pageController = PageController();
-  Timer? _autoSlideTimer;
-  int _currentPage = 0;
+  final TextEditingController _searchController = TextEditingController();
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _overlayEntry;
+  List<Movie> searchResults = [];
+  bool isSearching = false;
 
   late Future<List<Movie>> playingMovies;
   late Future<List<Movie>> popularMovies;
   late Future<List<Movie>> upcomingMovies;
   late Future<List<Movie>> topRatedMovies;
-  int selectedIndex = 0; // 선택된 토글 인덱스
+  int selectedIndex = 0;
   int currentPage = 1;
 
   @override
   void initState() {
     super.initState();
     _loadMovies();
-    // 자동 슬라이드 타이머 시작
-    _startAutoSlide();
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
-    _autoSlideTimer?.cancel();
-    _pageController.dispose();
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _scrollController.dispose();
+    _overlayEntry?.remove();
     super.dispose();
   }
 
-  void _startAutoSlide() {
-    _autoSlideTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (_pageController.hasClients) {
-        if (_currentPage < 4) {
-          _currentPage++;
-        } else {
-          _currentPage = 0;
-        }
-        _pageController.animateToPage(
-          _currentPage,
-          duration: const Duration(milliseconds: 800),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
+  void _onSearchChanged() {
+    if (_searchController.text.isEmpty) {
+      _removeOverlay();
+    }
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
   }
 
   void _loadMovies() {
-    playingMovies = _apiService.getPlayingMovies(); // 상영중인 영화
-    upcomingMovies = _apiService.getUpcomingMovies(); // 개봉 예정 영화
-    popularMovies = _apiService.getPopularMovies(); // 인기 영화
-    topRatedMovies = _apiService.getTopRatedMovies(page: currentPage); //탑 랭킹 영화
+    playingMovies = _apiService.getPlayingMovies();
+    upcomingMovies = _apiService.getUpcomingMovies();
+    popularMovies = _apiService.getPopularMovies();
+    topRatedMovies = _apiService.getTopRatedMovies(page: currentPage);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'My Movie Base',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 27,
+  Future<void> _searchMovies(String query) async {
+    if (query.trim().isEmpty) {
+      _removeOverlay();
+      setState(() {
+        searchResults = [];
+        isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      isSearching = true;
+    });
+
+    try {
+      final results = await _apiService.searchMovies(query);
+      setState(() {
+        searchResults = results;
+        isSearching = false;
+      });
+
+      // 검색 결과 오버레이 생성
+      _removeOverlay();
+      _createOverlay();
+    } catch (e) {
+      setState(() {
+        searchResults = [];
+        isSearching = false;
+      });
+    }
+  }
+
+  void _createOverlay() {
+    if (searchResults.isEmpty) return;
+
+    RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    var size = renderBox?.size ?? Size.zero;
+    var offset = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        left: offset.dx + 17,
+        top: offset.dy + 90, // 검색바 아래
+        width: size.width - 32, // 검색바와 같은 너비
+        child: CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          offset: const Offset(15, 70), // 검색바 아래에 위치
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
-        ),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          setState(() {
-            _loadMovies();
-          });
-        },
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeroSection(),
-              _buildToggleAndMovieSection(),
-              const SizedBox(height: 8),
-              _buildTopRatedSection(),
-              _buildPagination(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 최상단 자동 슬라이드 섹션
-  Widget _buildHeroSection() {
-    return FutureBuilder<List<Movie>>(
-      future: popularMovies,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox.shrink();
-
-        final heroMovies = snapshot.data!.take(5).toList();
-
-        return Stack(
-          children: [
-            SizedBox(
-              height: 200,
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                itemCount: heroMovies.length,
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: searchResults.length,
                 itemBuilder: (context, index) {
-                  final movie = heroMovies[index];
-                  return Stack(
-                    children: [
-                      // 배경 이미지
-                      Image.network(
-                        movie.backdropPath ?? movie.posterPath!,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
+                  final movie = searchResults[index];
+                  return InkWell(
+                    onTap: () {
+                      _removeOverlay();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MovieDetailScreen(
+                            movie: movie,
+                            heroTag: 'search_${movie.id}',
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
                       ),
-                      // 그라데이션 오버레이
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.8),
-                            ],
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Colors.grey[800]!,
+                            width: 0.5,
                           ),
                         ),
                       ),
-                      // 영화 정보
-                      Positioned(
-                        bottom: 20,
-                        left: 20,
-                        right: 20,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              movie.title,
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                      // 각 영화 검색 결과 타일
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Image.network(
+                              movie.posterPath ?? '',
+                              width: 40,
+                              height: 65,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 40,
+                                  height: 65,
+                                  color: Colors.grey[800],
+                                  child: const Icon(
+                                    Icons.movie,
+                                    color: Colors.white54,
+                                  ),
+                                );
+                              },
                             ),
-                            Text(
-                              movie.overview ?? '',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.grey[300],
-                              ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  movie.title,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${movie.releaseYear} · ${movie.genresText}',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   );
                 },
               ),
             ),
-            // 페이지 인디케이터 추가
-            Positioned(
-              bottom: 10,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  heroMovies.length,
-                  (index) => Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _currentPage == index
-                          ? Colors.blue
-                          : Colors.grey.withOpacity(0.5),
-                    ),
-                  ),
-                ),
-              ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  // 최상단 검색 섹션
+  Widget _buildSearchSection() {
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[900],
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
-        );
-      },
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: _searchMovies,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: '검색하고 싶은 영화가 있으신가요?',
+            hintStyle: TextStyle(color: Colors.grey[400]),
+            prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: Icon(Icons.clear, color: Colors.grey[400]),
+                    onPressed: () {
+                      _searchController.clear();
+                      _removeOverlay();
+                      setState(() {
+                        searchResults = [];
+                        isSearching = false;
+                      });
+                    },
+                  )
+                : null,
+            border: InputBorder.none,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
+      ),
     );
   }
 
@@ -361,7 +422,10 @@ class MovieListScreenState extends State<MovieListScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => MovieDetailScreen(movie: movie),
+                        builder: (context) => MovieDetailScreen(
+                          movie: movie,
+                          heroTag: 'topRated_${movie.id}',
+                        ),
                       ),
                     );
                   },
@@ -465,6 +529,41 @@ class MovieListScreenState extends State<MovieListScreen> {
             ),
           );
         }),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'My Movie Base',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 35,
+              ),
+        ),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {
+            _loadMovies();
+          });
+        },
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSearchSection(),
+              _buildToggleAndMovieSection(),
+              const SizedBox(height: 8),
+              _buildTopRatedSection(),
+              _buildPagination(),
+            ],
+          ),
+        ),
       ),
     );
   }

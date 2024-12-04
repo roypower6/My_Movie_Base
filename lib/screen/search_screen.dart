@@ -248,7 +248,11 @@ class SearchScreenState extends State<SearchScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => MovieDetailScreen(movie: movie),
+            builder: (context) => MovieDetailScreen(
+              movie: movie,
+              heroTag:
+                  fromSearch ? 'search_${movie.id}' : 'history_${movie.id}',
+            ),
           ),
         );
       },

@@ -31,6 +31,9 @@ class MyApp extends StatelessWidget {
           background: Colors.black,
         ),
         scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+        ),
       ),
       home: const SplashScreen(),
     );

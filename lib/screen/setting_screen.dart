@@ -12,6 +12,7 @@ class SettingScreen extends StatelessWidget {
           '앱 정보',
           style: TextStyle(
             fontWeight: FontWeight.bold,
+            fontSize: 30,
           ),
         ),
       ),

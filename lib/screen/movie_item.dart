@@ -9,62 +9,110 @@ class MovieItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MovieDetailScreen(movie: movie),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        color: Colors.grey[900]?.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        );
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: movie.posterPath != null
-                  ? Image.network(
-                      movie.fullPosterPath,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
+        ],
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  MovieDetailScreen(
+                movie: movie,
+                heroTag: 'movie_${movie.id}',
+              ),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                var begin = const Offset(1.0, 0.0);
+                var end = Offset.zero;
+                var curve = Curves.easeInOutQuart;
+                var tween = Tween(begin: begin, end: end).chain(
+                  CurveTween(curve: curve),
+                );
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
+              },
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: movie.posterPath != null
+                      ? Hero(
+                          tag: 'movie_${movie.id}',
+                          child: Image.network(
+                            movie.fullPosterPath,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[850],
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.error_outline_rounded,
+                                    color: Colors.white54,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : Container(
                           color: Colors.grey[850],
                           child: const Center(
-                            child: Icon(Icons.error_outline_rounded),
+                            child: Icon(
+                              Icons.movie_rounded,
+                              color: Colors.white54,
+                            ),
                           ),
-                        );
-                      },
-                    )
-                  : Container(
-                      color: Colors.grey[850],
-                      child: const Center(
-                        child: Icon(Icons.movie_rounded),
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            movie.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w500,
+                        ),
                 ),
-          ),
-          if (movie.releaseDate != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              movie.releaseDate!.substring(0, 4),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              ),
+              const SizedBox(height: 12),
+              Text(
+                movie.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (movie.releaseDate != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  movie.releaseDate!.substring(0, 4),
+                  style: TextStyle(
                     color: Colors.grey[400],
+                    fontSize: 14,
                   ),
-            ),
-          ],
-        ],
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
