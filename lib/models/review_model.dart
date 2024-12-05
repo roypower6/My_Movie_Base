@@ -1,5 +1,4 @@
 //영화 리뷰 리스트 모델
-import 'package:flutter/foundation.dart';
 
 class Review {
   final String id;
@@ -17,9 +16,6 @@ class Review {
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
-    if (kDebugMode) {
-      print('Parsing review JSON: $json');
-    }
     return Review(
       id: json['id'].toString(),
       author: json['author'] ?? json['username'] ?? '익명',

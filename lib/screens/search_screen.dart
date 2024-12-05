@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-import 'package:my_movie_base/model/movie_model.dart';
-import 'package:my_movie_base/screen/movie_detail_screen.dart';
+import 'package:my_movie_base/models/movie_model.dart';
+import 'package:my_movie_base/screens/movie_detail_screen.dart';
 import '../services/api_service.dart';
 
 class SearchScreen extends StatefulWidget {

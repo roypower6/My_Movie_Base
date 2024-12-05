@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
-import 'package:my_movie_base/screen/favorites_screen.dart';
-import 'package:my_movie_base/screen/home_screen.dart';
-import 'package:my_movie_base/screen/search_screen.dart';
-import 'package:my_movie_base/screen/setting_screen.dart';
+import 'package:my_movie_base/screens/favorites_screen.dart';
+import 'package:my_movie_base/screens/home_screen.dart';
+import 'package:my_movie_base/screens/search_screen.dart';
+import 'package:my_movie_base/screens/setting_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

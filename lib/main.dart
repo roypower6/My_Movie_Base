@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_movie_base/screen/splash_screen.dart';
+import 'package:my_movie_base/screens/splash_screen.dart';
 import 'package:my_movie_base/services/favorite_provider.dart';
 import 'package:provider/provider.dart';
 

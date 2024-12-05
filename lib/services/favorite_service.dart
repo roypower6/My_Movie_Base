@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:my_movie_base/model/movie_model.dart';
+import 'package:my_movie_base/models/movie_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FavoriteService {

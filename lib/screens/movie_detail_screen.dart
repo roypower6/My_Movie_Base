@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:my_movie_base/model/actor_model.dart';
-import 'package:my_movie_base/model/movie_model.dart';
-import 'package:my_movie_base/model/movie_video_model.dart';
-import 'package:my_movie_base/model/review_model.dart';
+import 'package:my_movie_base/models/actor_model.dart';
+import 'package:my_movie_base/models/movie_model.dart';
+import 'package:my_movie_base/models/movie_video_model.dart';
+import 'package:my_movie_base/models/review_model.dart';
 import 'package:my_movie_base/services/api_service.dart';
 import 'package:my_movie_base/services/favorite_provider.dart';
 import 'package:my_movie_base/services/favorite_service.dart';

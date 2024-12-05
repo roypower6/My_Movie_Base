@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:my_movie_base/model/movie_model.dart';
-import 'package:my_movie_base/screen/movie_detail_screen.dart';
+import 'package:my_movie_base/models/movie_model.dart';
+import 'package:my_movie_base/screens/movie_detail_screen.dart';
 
 class MovieItem extends StatelessWidget {
   final Movie movie;
 
-  const MovieItem({super.key, required this.movie});
+  const MovieItem({super.key, required this.movie, required String heroId});
 
   @override
   Widget build(BuildContext context) {

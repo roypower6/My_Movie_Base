@@ -1,6 +1,5 @@
 //영화 정보 모델
-import 'package:flutter/foundation.dart';
-import 'package:my_movie_base/model/actor_model.dart';
+import 'package:my_movie_base/models/actor_model.dart';
 
 class Movie {
   final int id;
@@ -164,9 +163,6 @@ class Movie {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http')) return path;
     final url = 'https://image.tmdb.org/t/p/$size$path';
-    if (kDebugMode) {
-      print('Generated Image URL: $url');
-    } // 디버깅용
     return url;
   }
 
