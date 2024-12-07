@@ -21,13 +21,19 @@ class Review {
       author: json['author'] ?? json['username'] ?? '익명',
       content: json['content'] ?? '',
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? _parseDateTime(json['created_at'])
           : null,
       rating: json['author_details'] != null &&
               json['author_details']['rating'] != null
           ? (json['author_details']['rating'] as num).toDouble()
           : null,
     );
+  }
+
+  static DateTime? _parseDateTime(String dateStr) {
+    // UTC 문자열 제거 후 파싱
+    String cleanDateStr = dateStr.replaceAll(' UTC', '');
+    return DateTime.parse(cleanDateStr);
   }
 
   String get formattedDate {
