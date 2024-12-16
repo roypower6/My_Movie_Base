@@ -82,48 +82,46 @@ class Movie {
     };
   }
 
-  factory Movie.fromJson(Map<String, dynamic> json) {
-    List<Actor> actorsList = [];
-    if (json['actors'] != null) {
-      actorsList = (json['actors'] as List)
-          .map((actorJson) => Actor.fromJson(actorJson))
-          .toList();
-    }
+  Movie.fromJson(Map<String, dynamic> json)
+      : id = json['id'],
+        title = json['title'],
+        posterPath = _processImagePath(json['poster_path']),
+        backdropPath = _processImagePath(json['backdrop_path']),
+        releaseDate = json['release_date'],
+        voteAverage = json['vote_average']?.toDouble(),
+        voteCount = json['vote_count'],
+        overview = json['overview'],
+        genres = _parseGenres(json),
+        originalLanguage = json['original_language'],
+        runtime = json['runtime'],
+        actors = _parseActors(json),
+        isFavorite = json['is_favorite'] ?? false;
 
-    // genres가 객체 리스트인 경우 (API 응답)
-    List<String> genres = [];
+  static String? _processImagePath(String? path) {
+    if (path == null || path.isEmpty) return null;
+    return 'https://image.tmdb.org/t/p/w500$path';
+  }
+
+  static List<String> _parseGenres(Map<String, dynamic> json) {
     if (json['genres'] is List &&
         json['genres'].isNotEmpty &&
         json['genres'][0] is String) {
-      genres = List<String>.from(json['genres']);
+      return List<String>.from(json['genres']);
     } else if (json['genres'] != null) {
-      genres = (json['genres'] as List)
+      return (json['genres'] as List)
           .map((genre) => genre['name'] as String)
           .toList();
     } else if (json['genre_ids'] != null) {
-      genres = _getGenresFromIds(json['genre_ids'] as List);
+      return _getGenresFromIds(json['genre_ids'] as List);
     }
+    return [];
+  }
 
-    String? processImagePath(String? path) {
-      if (path == null || path.isEmpty) return null;
-      return 'https://image.tmdb.org/t/p/w500$path';
-    }
-
-    return Movie(
-      id: json['id'],
-      title: json['title'],
-      posterPath: processImagePath(json['poster_path']),
-      backdropPath: processImagePath(json['backdrop_path']),
-      releaseDate: json['release_date'],
-      voteAverage: json['vote_average']?.toDouble(),
-      voteCount: json['vote_count'],
-      overview: json['overview'],
-      genres: genres,
-      originalLanguage: json['original_language'],
-      runtime: json['runtime'],
-      actors: actorsList,
-      isFavorite: json['is_favorite'] ?? false,
-    );
+  static List<Actor> _parseActors(Map<String, dynamic> json) {
+    if (json['actors'] == null) return [];
+    return (json['actors'] as List)
+        .map((actorJson) => Actor.fromJson(actorJson))
+        .toList();
   }
 
   // 장르 ID를 장르 이름으로 변환하는 매핑

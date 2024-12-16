@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:my_movie_base/models/movie_model.dart';
 import 'package:my_movie_base/screens/movie_detail_screen.dart';
 import '../services/api_service.dart';
+import 'package:my_movie_base/widgets/search_screen_widgets/movie_tile.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -59,19 +60,23 @@ class SearchScreenState extends State<SearchScreen> {
       });
 
       // 최근 검색 영화 추가
-      historyJson.add(jsonEncode({
-        'id': detailedMovie.id,
-        'title': detailedMovie.title,
-        'poster_path': detailedMovie.posterPath,
-        'release_date': detailedMovie.releaseDate,
-        'backdrop_path': detailedMovie.backdropPath,
-        'vote_average': detailedMovie.voteAverage,
-        'vote_count': detailedMovie.voteCount,
-        'overview': detailedMovie.overview,
-        'original_language': detailedMovie.originalLanguage,
-        'genres': detailedMovie.genres,
-        'runtime': detailedMovie.runtime,
-      }));
+      historyJson.add(
+        jsonEncode(
+          {
+            'id': detailedMovie.id,
+            'title': detailedMovie.title,
+            'poster_path': detailedMovie.posterPath,
+            'release_date': detailedMovie.releaseDate,
+            'backdrop_path': detailedMovie.backdropPath,
+            'vote_average': detailedMovie.voteAverage,
+            'vote_count': detailedMovie.voteCount,
+            'overview': detailedMovie.overview,
+            'original_language': detailedMovie.originalLanguage,
+            'genres': detailedMovie.genres,
+            'runtime': detailedMovie.runtime,
+          },
+        ),
+      );
 
       // 최대 20개까지 저장
       if (historyJson.length > 20) {
@@ -175,21 +180,26 @@ class SearchScreenState extends State<SearchScreen> {
     return _buildSearchResults();
   }
 
-  //검색 결과
   Widget _buildSearchResults() {
     return ListView.builder(
       itemCount: searchResults.length,
       itemBuilder: (context, index) {
         final movie = searchResults[index];
-        return _buildMovieTile(movie, fromSearch: true);
+        return MovieTile(
+          movie: movie,
+          onTap: () async {
+            await _saveToHistory(movie);
+            if (!mounted) return;
+            _navigateToDetail(movie, fromSearch: true);
+          },
+          fromSearch: true,
+        );
       },
     );
   }
 
-  //검색 이력
   Widget _buildSearchHistory() {
     if (searchHistory.isEmpty) {
-      //검색 이력 없으면
       return const Center(
         child: Text(
           '최근 검색한 영화가 없습니다.',
@@ -198,38 +208,19 @@ class SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    //검색 이력 있다면
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '최근 검색한 영화',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              TextButton(
-                onPressed: _clearSearchHistory,
-                child: const Text(
-                  '전체 삭제',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ],
-          ),
-        ),
+        _buildHistoryHeader(),
         Expanded(
-          //검색 이력 리스트로 반환
           child: ListView.builder(
             itemCount: searchHistory.length,
             itemBuilder: (context, index) {
               final movie = searchHistory[index];
-              return _buildMovieTile(movie, fromSearch: false);
+              return MovieTile(
+                movie: movie,
+                onTap: () => _navigateToDetail(movie, fromSearch: false),
+                fromSearch: false,
+              );
             },
           ),
         ),
@@ -237,57 +228,39 @@ class SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  //MovieTile 빌드 위젯
-  Widget _buildMovieTile(Movie movie, {required bool fromSearch}) {
-    return ListTile(
-      onTap: () async {
-        if (fromSearch) {
-          await _saveToHistory(movie);
-        }
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MovieDetailScreen(
-              movie: movie,
-              heroTag:
-                  fromSearch ? 'search_${movie.id}' : 'history_${movie.id}',
+  Widget _buildHistoryHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            '최근 검색한 영화',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        );
-      },
-      leading: movie.posterPath != null
-          ? Image.network(
-              movie.thumbnailPath,
-              width: 50,
-              height: 75,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(Icons.movie, size: 50);
-              },
-            )
-          : const Icon(Icons.movie, size: 50),
-      //영화 제목
-      title: Text(
-        movie.title,
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      subtitle: Text(
-        // 영화 상영 연도, 장르 (null 체크 및 기본값 추가)
-        '${movie.releaseYear.isNotEmpty ? movie.releaseYear : '미정'} · ${movie.genres.isNotEmpty ? movie.genresText : '장르 없음'}',
-        style: const TextStyle(color: Colors.grey),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.star, color: Colors.amber, size: 16),
-          const SizedBox(width: 1.5),
-          Text(
-              // 영화 평점 (null 체크 및 기본값 추가)
-              movie.voteAverage != null && movie.voteAverage != 0.0
-                  ? '${((movie.voteAverage! * 10)).toInt()}%'
-                  : 'N/R'),
+          TextButton(
+            onPressed: _clearSearchHistory,
+            child: const Text(
+              '전체 삭제',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  void _navigateToDetail(Movie movie, {required bool fromSearch}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MovieDetailScreen(
+          movie: movie,
+          heroTag: fromSearch ? 'search_${movie.id}' : 'history_${movie.id}',
+        ),
       ),
     );
   }

@@ -12,14 +12,11 @@ class Actor {
     required this.character,
   });
 
-  factory Actor.fromJson(Map<String, dynamic> json) {
-    return Actor(
-      id: json['id'],
-      name: json['name'],
-      profilePath: json['profile_path'],
-      character: json['character'] ?? '',
-    );
-  }
+  Actor.fromJson(Map<String, dynamic> json)
+      : id = json['id'],
+        name = json['name'],
+        profilePath = json['profile_path'],
+        character = json['character'] ?? '';
 
   String get fullProfilePath {
     if (profilePath == null || profilePath!.isEmpty) return '';

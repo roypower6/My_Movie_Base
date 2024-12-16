@@ -15,20 +15,17 @@ class Review {
     this.rating,
   });
 
-  factory Review.fromJson(Map<String, dynamic> json) {
-    return Review(
-      id: json['id'].toString(),
-      author: json['author'] ?? json['username'] ?? '익명',
-      content: json['content'] ?? '',
-      createdAt: json['created_at'] != null
-          ? _parseDateTime(json['created_at'])
-          : null,
-      rating: json['author_details'] != null &&
-              json['author_details']['rating'] != null
-          ? (json['author_details']['rating'] as num).toDouble()
-          : null,
-    );
-  }
+  Review.fromJson(Map<String, dynamic> json)
+      : id = json['id'].toString(),
+        author = json['author'] ?? json['username'] ?? '익명',
+        content = json['content'] ?? '',
+        createdAt = json['created_at'] != null
+            ? _parseDateTime(json['created_at'])
+            : null,
+        rating = json['author_details'] != null &&
+                json['author_details']['rating'] != null
+            ? (json['author_details']['rating'] as num).toDouble()
+            : null;
 
   static DateTime? _parseDateTime(String dateStr) {
     // UTC 문자열 제거 후 파싱

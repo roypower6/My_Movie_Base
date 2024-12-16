@@ -11,12 +11,9 @@ class MovieVideo {
     required this.type,
   });
 
-  factory MovieVideo.fromJson(Map<String, dynamic> json) {
-    return MovieVideo(
-      id: json['id'],
-      key: json['key'],
-      name: json['name'],
-      type: json['type'],
-    );
-  }
+  MovieVideo.fromJson(Map<String, dynamic> json)
+      : id = json['id'],
+        key = json['key'],
+        name = json['name'],
+        type = json['type'];
 }
